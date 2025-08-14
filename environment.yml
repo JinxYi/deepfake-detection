@@ -1,7 +1,14 @@
-name: dl-env
+name: mlenv
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.7
-  - codecov
+  - python=3.11
+  - pytorch
+  - torchvision
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - pillow
+  - datasets
