@@ -1,6 +1,5 @@
 import io
 import numpy as np
-import cv2
 from PIL import Image
 
 def ela(image, quality=95, scale=10):

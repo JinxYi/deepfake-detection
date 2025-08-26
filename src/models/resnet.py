@@ -8,6 +8,35 @@ from torchmetrics.classification import (
     BinaryAUROC
 )
 import pytorch_lightning as L
+from torchvision import transforms
+
+image_size = 224
+
+RESNET_INPUT_MEAN = [0.485, 0.456, 0.406]
+RESNET_INPUT_SD = [0.229, 0.224, 0.225]
+
+# Default image transformations
+DEFAULT_DATA_TRANSFORMS = {
+    'train': transforms.Compose([
+        transforms.RandomResizedCrop(image_size),
+        transforms.RandomHorizontalFlip(),
+        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize(RESNET_INPUT_MEAN, RESNET_INPUT_SD) #mean and std dev values for each channel from ImageNet (pretrain data)
+    ]),
+    'val': transforms.Compose([
+        transforms.Resize(int(image_size * 1.14)),
+        transforms.CenterCrop(image_size),
+        transforms.ToTensor(),
+        transforms.Normalize(RESNET_INPUT_MEAN, RESNET_INPUT_SD) #mean and std dev values for each channel from ImageNet (pretrain data)
+    ]),
+    'test': transforms.Compose([
+        transforms.Resize(int(image_size * 1.14)),
+        transforms.CenterCrop(image_size),
+        transforms.ToTensor(),
+        transforms.Normalize(RESNET_INPUT_MEAN, RESNET_INPUT_SD) #mean and std dev values for each channel from ImageNet (pretrain data)
+    ]),
+}
 
 class ResNetClassifier(L.LightningModule):
     def __init__(self, freeze_features=False, lr=1e-3):
