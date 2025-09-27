@@ -120,6 +120,9 @@ class ResNetClassifier(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         return self._step(batch, "test")
+    
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+        return self(batch)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)

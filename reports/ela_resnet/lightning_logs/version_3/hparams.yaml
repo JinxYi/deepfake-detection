@@ -1,0 +1,2 @@
+freeze_features: true
+lr: 0.001
