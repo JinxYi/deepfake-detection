@@ -20,14 +20,15 @@
 ##SBATCH --nodelist=TC1N07
 
 ### Specify Time Limit, format: <min> or <min>:<sec> or <hr>:<min>:<sec> or <days>-<hr>:<min>:<sec> or <days>-<hr> ### 
-#SBATCH --time=360
+#SBATCH --time=720
 
 ### Specify name for the job, filename format for output and error ###
-#SBATCH --job-name=TestJob
+#SBATCH --job-name=jupy_setup
 #SBATCH --output=output_%x_%j.out
 #SBATCH --error=error_%x_%j.err
 
 ### Your script for computation ###
+module load cuda/12.2
 module load anaconda
 source activate df-env
-python test.py
+jupyter-notebook --ip=$(hostname -i) --port=8888

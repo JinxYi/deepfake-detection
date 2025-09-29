@@ -1,18 +1,20 @@
-name: mlenv
+name: df-env
 channels:
-  - defaults
   - https://repo.anaconda.com/pkgs/main
   - https://repo.anaconda.com/pkgs/r
-  - https://repo.anaconda.com/pkgs/msys2
 dependencies:
-  - python=3.12
-  - lightning
-  - ipykernel
   - datasets
-  - conda-forge::matplotlib
+  - ipykernel
+  - jupyter
+  - matplotlib
+  - nb_conda_kernels
+  - numpy
+  - opencv
+  - pyarrow
+  - python=3.10
   - conda-forge::pytorch-lightning
+  - transformers
+  - pytorch-cuda
+  - pytorch
   - torchvision
-  - conda-forge::opencv
-  - pyarrow==13.0.0
-  - conda-forge::transformers
-prefix: C:\Users\jinxy\anaconda3\envs\mlenv
+prefix: /home/FYP/tanj0303/.conda/envs/df-env
