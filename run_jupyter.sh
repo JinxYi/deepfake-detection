@@ -20,10 +20,10 @@
 ##SBATCH --nodelist=TC1N07
 
 ### Specify Time Limit, format: <min> or <min>:<sec> or <hr>:<min>:<sec> or <days>-<hr>:<min>:<sec> or <days>-<hr> ### 
-#SBATCH --time=720
+#SBATCH --time=360
 
 ### Specify name for the job, filename format for output and error ###
-#SBATCH --job-name=jupy_setup
+#SBATCH --job-name=JupyJob
 #SBATCH --output=output_%x_%j.out
 #SBATCH --error=error_%x_%j.err
 
