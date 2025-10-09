@@ -15,7 +15,7 @@ dependencies:
   - conda-forge::pytorch-lightning
   - transformers
   - pytorch::pytorch-cuda
-  - pytorch
+  - pytorch::pytorch
   - torchvision
   - timm
 prefix: /home/FYP/tanj0303/.conda/envs/df-env

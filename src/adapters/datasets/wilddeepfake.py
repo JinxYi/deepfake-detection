@@ -1,7 +1,7 @@
 from collections.abc import Callable
 import torch
 from datasets import load_dataset, IterableDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import config
 import pytorch_lightning as L
 
@@ -102,7 +102,7 @@ class WildDeepfakeIterableDataset(IterableDataset):
             count += 1
 
             try:
-                print(f"Loading sample {count}: {sample}")
+                print(f"Loading sample {count}: {sample.keys()}")
                 image = sample["png"]
                 label = sample["label"]
 
@@ -117,11 +117,42 @@ class WildDeepfakeIterableDataset(IterableDataset):
             except Exception as e:
                 print(f"Error loading sample {count}: {e}")
                 placeholder = torch.zeros((3, 224, 224))  # replace 224 with your `image_size`
-                yield placeholder, torch.tensor(-1, dtype=torch.float32)
+                raise
+                # yield placeholder, torch.tensor(-1, dtype=torch.float32)
     def __len__(self):
         if self.max_samples:
             return self.max_samples
         return 900000
+    
+class WildDeepfakeDataset(Dataset):
+    """Map-style Dataset for deepfake detection (non-streaming)"""
+
+    def __init__(self, samples, transform=None, additional_transforms=None, max_samples=None):
+        self.samples = list(samples)  # Ensure it's indexable
+        if max_samples:
+            self.samples = self.samples[:max_samples]
+        self.transform = transform
+        self.additional_transforms = additional_transforms
+
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        try:
+            image = sample["png"]
+            label = sample["label"]
+
+            if self.additional_transforms:
+                image = self.additional_transforms(image)
+            if self.transform:
+                image = self.transform(image)
+
+            return image, torch.tensor(label, dtype=torch.float32)
+        except Exception as e:
+            print(f"Error loading sample {idx}: {e}")
+            placeholder = torch.zeros((3, 224, 224))  # Adjust image size as needed
+            return placeholder, torch.tensor(-1, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.samples)
     
 
 def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_workers=2, transforms = None, additional_transforms: Callable | None = None):
@@ -177,7 +208,7 @@ def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_wo
     return train_loader, val_loader, test_loader
 
 class WildDeepfakeDataModule(L.LightningDataModule):
-    def __init__(self, dataset_name, batch_size=32, num_workers=0, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None):
+    def __init__(self, dataset_name, batch_size=32, num_workers=2, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None):
         super().__init__()
         self.dataset_name = dataset_name
         self.batch_size = batch_size
@@ -189,40 +220,23 @@ class WildDeepfakeDataModule(L.LightningDataModule):
 
     def setup(self, stage=None):
         """Load and preprocess datasets (called on every process in DDP)."""
-        dataset = load_dataset(self.dataset_name, streaming=True)
+        dataset = load_dataset(self.dataset_name)
 
         # Preprocess and filter
-        train_ds = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(buffer_size=10_000, seed=self.seed)
+        train_ds = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(seed=self.seed)
         test_ds  = dataset["test"].map(_process_sample).filter(lambda x: x['label'] != -1)
 
-        def split_train_val(ds, val_size=0.1, max_samples=None):
-            if val_size < 0 or val_size > 1:
-                raise ValueError("Valication split size should be between 0 and 1")
-            partition = val_size * 10
-            def gen(split):
-                count = 0
-                for sample in ds:
-                    if max_samples and count >= max_samples:
-                        break
-                    count += 1
-                    if count % partition == 0 and split == "val":  # ~ partition % validation
-                        yield sample
-                    elif count % partition != 0 and split == "train":
-                        yield sample
-            return gen("train"), gen("val")
-
-        train_ds, val_ds = split_train_val(train_ds, max_samples=self.max_samples)
+        train_ds, val_ds = train_ds.train_test_split(test_size=0.2, seed=self.seed) # create validation set
 
         # Wrap with your iterable dataset class
-        self.train_dataset = WildDeepfakeIterableDataset(train_ds, transform=self.transforms["train"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
-        self.val_dataset   = WildDeepfakeIterableDataset(val_ds, transform=self.transforms["val"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
-        self.test_dataset  = WildDeepfakeIterableDataset(test_ds, transform=self.transforms["test"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
+        self.train_dataset = WildDeepfakeDataset(train_ds, transform=self.transforms["train"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
+        self.val_dataset   = WildDeepfakeDataset(val_ds, transform=self.transforms["val"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
+        self.test_dataset  = WildDeepfakeDataset(test_ds, transform=self.transforms["test"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
 
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=False,   # can't shuffle IterableDataset
             num_workers=self.num_workers,
             pin_memory=False,
             drop_last=True
@@ -232,7 +246,6 @@ class WildDeepfakeDataModule(L.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            shuffle=False,
             num_workers=self.num_workers,
             pin_memory=False
         )
@@ -241,7 +254,6 @@ class WildDeepfakeDataModule(L.LightningDataModule):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            shuffle=False,
             num_workers=self.num_workers,
             pin_memory=False
         )
