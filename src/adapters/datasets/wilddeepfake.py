@@ -102,6 +102,7 @@ class WildDeepfakeIterableDataset(IterableDataset):
             count += 1
 
             try:
+                print(f"Loading sample {count}: {sample}")
                 image = sample["png"]
                 label = sample["label"]
 

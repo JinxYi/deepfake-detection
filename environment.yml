@@ -14,7 +14,7 @@ dependencies:
   - python=3.10
   - conda-forge::pytorch-lightning
   - transformers
-  - pytorch-cuda
+  - pytorch::pytorch-cuda
   - pytorch
   - torchvision
   - timm

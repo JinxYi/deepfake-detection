@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 
 ### Specify Memory allocate to this job ###
-#SBATCH --mem=5G
+#SBATCH --mem=64G
 
 ### Specify number of core (CPU) to allocate to per node ###
 #SBATCH --ntasks-per-node=1
@@ -30,8 +30,11 @@
 ### Your script for computation ###
 module load cuda/12.2
 module load anaconda
-
 source activate df-env
+
+# Debug: Show the Python version and path
+python --version
+python -m site
 
 # Run your script
 python src/models/sfiad.py

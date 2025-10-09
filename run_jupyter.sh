@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 
 ### Specify Memory allocate to this job ###
-#SBATCH --mem=10G
+#SBATCH --mem=64G
 
 ### Specify number of core (CPU) to allocate to per node ###
 #SBATCH --ntasks-per-node=1
@@ -23,12 +23,17 @@
 #SBATCH --time=360
 
 ### Specify name for the job, filename format for output and error ###
-#SBATCH --job-name=JupyJob
+#SBATCH --job-name=jupyter
 #SBATCH --output=output_%x_%j.out
 #SBATCH --error=error_%x_%j.err
 
 ### Your script for computation ###
 module load cuda/12.2
 module load anaconda
+eval "$(conda shell.bash hook)"
 source activate df-env
+
+# Debug: Show the Python version
+python --version
+
 jupyter-notebook --ip=$(hostname -i) --port=8888
