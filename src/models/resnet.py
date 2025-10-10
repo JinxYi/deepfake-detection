@@ -39,12 +39,46 @@ DEFAULT_DATA_TRANSFORMS = {
 }
 
 class ResNetClassifier(L.LightningModule):
-    def __init__(self, freeze_features=False, lr=1e-3):
+    def __init__(self, 
+                in_channels=3,
+                image_size=224,
+                freeze_features=False, 
+                lr=1e-3,
+                weights=ResNet18_Weights.DEFAULT):
         super().__init__()
         self.save_hyperparameters()
 
         num_classes = 1  # binary classification
-        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model = resnet18(weights=weights)
+        if in_channels <= 0: raise ValueError("in_channels must be a positive integer")
+        #  Adapt first conv layer for variable channel count ---
+        if in_channels != 3:
+            old_conv = self.model.conv1
+            new_conv = torch.nn.Conv2d(in_channels,
+                                 old_conv.out_channels,
+                                 kernel_size=old_conv.kernel_size,
+                                 stride=old_conv.stride,
+                                 padding=old_conv.padding,
+                                 bias=(old_conv.bias is not None))
+            with torch.no_grad():
+                if in_channels == 1:
+                    # average pretrained RGB weights to single channel
+                    new_conv.weight[:] = old_conv.weight.mean(dim=1, keepdim=True)
+                elif in_channels > 3:
+                    # copy RGB weights to first 3 channels, init extras
+                    new_conv.weight[:, :3, :, :] = old_conv.weight
+                    extra = old_conv.weight.mean(dim=1, keepdim=True)
+                    new_conv.weight[:, 3:, :, :] = extra.repeat(1, in_channels - 3, 1, 1)
+                elif in_channels == 2:
+                    new_conv.weight[:, :in_channels, :, :] = old_conv.weight[:, :in_channels, :, :]
+                    # initialize any remaining channels with mean
+                    mean_extra = old_conv.weight.mean(dim=1, keepdim=True)
+                    new_conv.weight[:, in_channels:, :, :] = mean_extra.repeat(1, 3 - in_channels, 1, 1)
+            self.model.conv1 = new_conv
+
+        # Replace final layer
+        in_features = self.model.fc.in_features
+        self.model.fc = torch.nn.Linear(in_features, num_classes)
 
         # Optionally freeze backbone
         if freeze_features:
@@ -52,9 +86,6 @@ class ResNetClassifier(L.LightningModule):
                 if not name.startswith("fc."):
                     param.requires_grad = False
 
-        # Replace final layer
-        in_features = self.model.fc.in_features
-        self.model.fc = torch.nn.Linear(in_features, num_classes)
 
         # Loss
         self.criterion = torch.nn.BCEWithLogitsLoss()
@@ -90,26 +121,13 @@ class ResNetClassifier(L.LightningModule):
         loss = self.criterion(logits, y.float())
         preds = torch.sigmoid(logits)
 
-        # Update metrics
-        acc  = getattr(self, f"{stage}_acc")
-        prec = getattr(self, f"{stage}_prec")
-        rec  = getattr(self, f"{stage}_rec")
-        f1   = getattr(self, f"{stage}_f1")
-        auc  = getattr(self, f"{stage}_auc")
+        # metrics
+        for metric_name in ["acc", "prec", "rec", "f1", "auc"]:
+            metric = getattr(self, f"{stage}_{metric_name}")
+            metric.update(preds, y.int())
+            self.log(f"{stage}_{metric_name}", metric, on_epoch=True, prog_bar=True)
 
-        acc.update(preds, y.int())
-        prec.update(preds, y.int())
-        rec.update(preds, y.int())
-        f1.update(preds, y.int())
-        auc.update(preds, y.int())
-
-        self.log(f"{stage}_loss", loss, prog_bar=True, on_epoch=True)
-        self.log(f"{stage}_acc", acc, prog_bar=True, on_epoch=True)
-        self.log(f"{stage}_prec", prec, prog_bar=True, on_epoch=True)
-        self.log(f"{stage}_rec", rec, prog_bar=True, on_epoch=True)
-        self.log(f"{stage}_f1", f1, prog_bar=True, on_epoch=True)
-        self.log(f"{stage}_auc", auc, prog_bar=True, on_epoch=True)
-
+        self.log(f"{stage}_loss", loss, on_epoch=True, prog_bar=True)
         return loss
 
     def training_step(self, batch, batch_idx):

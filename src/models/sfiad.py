@@ -8,6 +8,19 @@ from torchmetrics.classification import (
     AUROC
 )
 import timm
+from torchvision import transforms
+
+resize_transforms = transforms.Compose([
+    transforms.Resize((256, 256)),                 # Resize to match model input
+    transforms.Lambda(lambda img: img.convert("RGB")),  # Ensure 3 channels
+    transforms.ToTensor(),                         # Converts to float32, [0, 1]
+])
+
+SFIAD_TRANSFORMS = {
+    'train': resize_transforms,
+    'val': resize_transforms,
+    'test': resize_transforms
+}
 
 class SFFIModule(nn.Module):
     """Spatial-Frequency Feature Integration Module"""
@@ -108,13 +121,20 @@ class AAMLLoss(nn.Module):
         self.m_max = m_max
         self.class_counts = None
     
+    # def update_class_counts(self, labels):
+    #     """Update class sample counts from the batch"""
+    #     unique, counts = torch.unique(labels, return_counts=True)
+    #     if self.class_counts is None:
+    #         self.class_counts = torch.zeros(self.num_classes, device=labels.device)
+    #     for cls, count in zip(unique, counts):
+    #         self.class_counts[cls] += count
     def update_class_counts(self, labels):
         """Update class sample counts from the batch"""
         unique, counts = torch.unique(labels, return_counts=True)
         if self.class_counts is None:
             self.class_counts = torch.zeros(self.num_classes, device=labels.device)
         for cls, count in zip(unique, counts):
-            self.class_counts[cls] += count
+            self.class_counts[int(cls.item())] += count.item()  # <-- fix: ensure integer indexing
     
     def compute_margins(self):
         """Compute dynamic margins based on class counts"""

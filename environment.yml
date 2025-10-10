@@ -1,5 +1,6 @@
 name: df-env
 channels:
+  - pytorch
   - https://repo.anaconda.com/pkgs/main
   - https://repo.anaconda.com/pkgs/r
 dependencies:
@@ -16,6 +17,6 @@ dependencies:
   - transformers
   - pytorch::pytorch-cuda
   - pytorch::pytorch
-  - torchvision
+  - pytorch::torchvision
   - timm
 prefix: /home/FYP/tanj0303/.conda/envs/df-env

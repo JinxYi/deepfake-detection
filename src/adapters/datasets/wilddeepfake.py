@@ -4,6 +4,15 @@ from datasets import load_dataset, IterableDataset
 from torch.utils.data import DataLoader, Dataset
 import config
 import pytorch_lightning as L
+from PIL import Image
+import io
+
+DATASET_NAME = "xingjunm/WildDeepfake"
+
+def dict_to_pil(image_dict):
+    if isinstance(image_dict, dict) and "bytes" in image_dict:
+        return Image.open(io.BytesIO(image_dict["bytes"]))
+    raise ValueError(f"Cannot convert to PIL: {type(image_dict)}")
 
 def _extract_label(key_path):
     """Extract label from the file path in '__key__'"""
@@ -29,6 +38,13 @@ def _process_sample(sample):
         
         # Return processed sample with label
         sample['label'] = label
+
+        # In __getitem__ and __iter__ methods, replace:
+        # image = sample["png"]
+        # with:
+        image = sample["png"]
+        if isinstance(image, dict):
+            image = dict_to_pil(image)
         return sample
             
     except Exception as e:
@@ -102,8 +118,9 @@ class WildDeepfakeIterableDataset(IterableDataset):
             count += 1
 
             try:
-                print(f"Loading sample {count}: {sample.keys()}")
                 image = sample["png"]
+                if isinstance(image, dict):
+                    image = dict_to_pil(image)
                 label = sample["label"]
 
                 # Perform transformations
@@ -124,37 +141,6 @@ class WildDeepfakeIterableDataset(IterableDataset):
             return self.max_samples
         return 900000
     
-class WildDeepfakeDataset(Dataset):
-    """Map-style Dataset for deepfake detection (non-streaming)"""
-
-    def __init__(self, samples, transform=None, additional_transforms=None, max_samples=None):
-        self.samples = list(samples)  # Ensure it's indexable
-        if max_samples:
-            self.samples = self.samples[:max_samples]
-        self.transform = transform
-        self.additional_transforms = additional_transforms
-
-    def __getitem__(self, idx):
-        sample = self.samples[idx]
-        try:
-            image = sample["png"]
-            label = sample["label"]
-
-            if self.additional_transforms:
-                image = self.additional_transforms(image)
-            if self.transform:
-                image = self.transform(image)
-
-            return image, torch.tensor(label, dtype=torch.float32)
-        except Exception as e:
-            print(f"Error loading sample {idx}: {e}")
-            placeholder = torch.zeros((3, 224, 224))  # Adjust image size as needed
-            return placeholder, torch.tensor(-1, dtype=torch.float32)
-
-    def __len__(self):
-        return len(self.samples)
-    
-
 def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_workers=2, transforms = None, additional_transforms: Callable | None = None):
     """
     Create data loaders from dataset
@@ -207,8 +193,39 @@ def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_wo
     
     return train_loader, val_loader, test_loader
 
+class WildDeepfakeDataset(Dataset):
+    """Map-style Dataset for deepfake detection (non-streaming)"""
+
+    def __init__(self, samples, transform=None, additional_transforms=None, max_samples=None):
+        self.samples = list(samples)  # Ensure it's indexable
+        if max_samples:
+            self.samples = self.samples[:max_samples]
+        self.transform = transform
+        self.additional_transforms = additional_transforms
+
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        # sample = _process_sample(sample)
+        try:
+            image = sample["png"]
+            label = sample["label"]
+
+            if self.additional_transforms:
+                image = self.additional_transforms(image)
+            if self.transform:
+                image = self.transform(image)
+
+            return image, torch.tensor(label, dtype=torch.float32)
+        except Exception as e:
+            print(f"Error loading sample {idx}: {e}")
+            placeholder = torch.zeros((3, 224, 224))  # Adjust image size as needed
+            return placeholder, torch.tensor(-1, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.samples)
+    
 class WildDeepfakeDataModule(L.LightningDataModule):
-    def __init__(self, dataset_name, batch_size=32, num_workers=2, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None):
+    def __init__(self, dataset_name=DATASET_NAME, batch_size=32, num_workers=2, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None):
         super().__init__()
         self.dataset_name = dataset_name
         self.batch_size = batch_size
@@ -223,6 +240,8 @@ class WildDeepfakeDataModule(L.LightningDataModule):
         dataset = load_dataset(self.dataset_name)
 
         # Preprocess and filter
+        # train_ds = dataset["train"].shuffle(seed=self.seed)
+        # test_ds  = dataset["test"]
         train_ds = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(seed=self.seed)
         test_ds  = dataset["test"].map(_process_sample).filter(lambda x: x['label'] != -1)
 
