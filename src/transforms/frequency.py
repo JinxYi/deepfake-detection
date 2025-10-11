@@ -14,7 +14,8 @@ def fft_magnitude(img: Image.Image):
     fshift = np.fft.fftshift(f)
     mag = np.log1p(np.abs(fshift))
     mag = (mag - mag.min()) / (mag.max() - mag.min())
-    return Image.fromarray((mag * 255).astype(np.uint8))
+    mag = mag.astype(np.float32)
+    return torch.from_numpy(mag).unsqueeze(0)  # shape (1, H, W)
 
 
 def fft_real_imag(img: Image.Image):
@@ -34,26 +35,31 @@ def dct_coeff(img: Image.Image):
     dct = cv2.dct(img)
     dct = np.log1p(np.abs(dct))
     dct = (dct - dct.min()) / (dct.max() - dct.min())
-    return Image.fromarray((dct * 255).astype(np.uint8))
+    dct = dct.astype(np.float32)
+    return torch.from_numpy(dct).unsqueeze(0)  # (1, H, W)
 
 
-def wavelet_subbands(img: Image.Image, wavelet='haar'):
+def wavelet_subbands(img: Image.Image, wavelet='haar') -> torch.Tensor:
     img = np.array(img.convert("L"), dtype=np.float32)
     coeffs2 = pywt.dwt2(img, wavelet)
     cA, (cH, cV, cD) = coeffs2
+
     def norm(x):
         x = (x - x.min()) / (x.max() - x.min())
         return x
-    arr = np.stack([norm(cA), norm(cH), norm(cV), norm(cD)], axis=0).astype(np.float32)
-    return torch.from_numpy(arr)   # shape (4,H/2,W/2)
 
+    arr = np.stack(
+        [norm(cA), norm(cH), norm(cV), norm(cD)], axis=0
+    ).astype(np.float32)  # (4, H/2, W/2)
+    return torch.from_numpy(arr)
 
-def high_freq_residual(img: Image.Image, kernel_size=5):
+def high_freq_residual(img: Image.Image, kernel_size=5) -> torch.Tensor:
     img_gray = np.array(img.convert("L"), dtype=np.float32)
     blur = cv2.GaussianBlur(img_gray, (kernel_size, kernel_size), 0)
     res = img_gray - blur
     res = (res - res.min()) / (res.max() - res.min())
-    return Image.fromarray((res * 255).astype(np.uint8))
+    res = res.astype(np.float32)
+    return torch.from_numpy(res).unsqueeze(0)  # (1, H, W)
 
 
 def get_transforms(mode: str, image_size: int = 224):
@@ -71,7 +77,7 @@ def get_transforms(mode: str, image_size: int = 224):
 
     if mode == 'rgb':
         norm_mean, norm_std = RESNET_INPUT_MEAN, RESNET_INPUT_SD
-        freq_transform = transforms.Lambda(lambda x: x)
+        freq_transform = transforms.ToTensor(),
 
     elif mode == 'fft_mag':
         norm_mean, norm_std = [0.5], [0.5]
