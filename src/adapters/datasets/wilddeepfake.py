@@ -6,6 +6,7 @@ import config
 import pytorch_lightning as L
 from PIL import Image
 import io
+from torchvision.transforms.functional import to_pil_image
 
 DATASET_NAME = "xingjunm/WildDeepfake"
 
@@ -196,10 +197,8 @@ def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_wo
 class WildDeepfakeDataset(Dataset):
     """Map-style Dataset for deepfake detection (non-streaming)"""
 
-    def __init__(self, samples, transform=None, additional_transforms=None, max_samples=None):
-        self.samples = list(samples)  # Ensure it's indexable
-        if max_samples:
-            self.samples = self.samples[:max_samples]
+    def __init__(self, samples, transform=None, additional_transforms=None):
+        self.samples = samples  # Ensure it's indexable
         self.transform = transform
         self.additional_transforms = additional_transforms
 
@@ -214,7 +213,7 @@ class WildDeepfakeDataset(Dataset):
                 image = self.additional_transforms(image)
             if self.transform:
                 image = self.transform(image)
-
+                
             return image, torch.tensor(label, dtype=torch.float32)
         except Exception as e:
             print(f"Error loading sample {idx}: {e}")
@@ -246,18 +245,21 @@ class WildDeepfakeDataModule(L.LightningDataModule):
         # Preprocess and filter
         # train_ds = dataset["train"].shuffle(seed=self.seed)
         # test_ds  = dataset["test"]
-        train_ds = dataset["train"].map(_process_sample, num_proc=self.num_workers, load_from_cache_file=True).filter(lambda x: x['label'] != -1).shuffle(seed=self.seed)
-        test_ds  = dataset["test"].map(_process_sample, num_proc=self.num_workers, load_from_cache_file=True).filter(lambda x: x['label'] != -1)
-
+        print("Dataset loaded. Processing samples...")
+        train_ds = dataset["train"].map(_process_sample, num_proc=self.num_workers)
+        test_ds  = dataset["test"].map(_process_sample, num_proc=self.num_workers)
+        
+        print("Extracted labels. Generating train/val split...")
         split = train_ds.train_test_split(test_size=0.2, seed=self.seed)
         train_ds = split["train"]
         val_ds = split["test"]
         # train_ds, val_ds = train_ds.train_test_split(test_size=0.2, seed=self.seed) # create validation set
 
+        print(f"Train samples: {len(train_ds)}, Val samples: {len(val_ds)}, Test samples: {len(test_ds)}")
         # Wrap with your iterable dataset class
-        self.train_dataset = WildDeepfakeDataset(train_ds, transform=self.transforms["train"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
-        self.val_dataset   = WildDeepfakeDataset(val_ds, transform=self.transforms["val"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
-        self.test_dataset  = WildDeepfakeDataset(test_ds, transform=self.transforms["test"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)
+        self.train_dataset = WildDeepfakeDataset(train_ds, transform=self.transforms["train"], additional_transforms=self.additional_transforms)
+        self.val_dataset   = WildDeepfakeDataset(val_ds, transform=self.transforms["val"], additional_transforms=self.additional_transforms)
+        self.test_dataset  = WildDeepfakeDataset(test_ds, transform=self.transforms["test"], additional_transforms=self.additional_transforms)
 
     def train_dataloader(self):
         return DataLoader(

@@ -99,17 +99,17 @@ def get_transforms(mode: str, image_size: int = 224):
     data_transforms = {
         'train': transforms.Compose(common_train + [
             freq_transform,
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
         'val': transforms.Compose(common_eval + [
             freq_transform,
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
         'test': transforms.Compose(common_eval + [
             freq_transform,
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
     }

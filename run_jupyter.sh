@@ -11,13 +11,14 @@
 
 ### Specify number of core (CPU) to allocate to per node ###
 #SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
 
 ### Specify number of node to compute ###
 #SBATCH --nodes=1
 
 ### Optional: Specify node to execute the job ###
 ### Remove 1st # at next line for the option to take effect ###
-##SBATCH --nodelist=TC1N07
+#SBATCH --nodelist=TC1N04
 
 ### Specify Time Limit, format: <min> or <min>:<sec> or <hr>:<min>:<sec> or <days>-<hr>:<min>:<sec> or <days>-<hr> ### 
 #SBATCH --time=360
@@ -36,4 +37,4 @@ source activate df-env
 # Debug: Show the Python version
 python --version
 
-jupyter-notebook --ip=$(hostname -i) --port=8888
+jupyter-notebook --ip=$(hostname -i) --port=8889
