@@ -5,6 +5,9 @@ from PIL import Image
 import cv2
 import pywt   # wavelet
 
+RESNET_INPUT_MEAN = [0.485, 0.456, 0.406]
+RESNET_INPUT_SD = [0.229, 0.224, 0.225]
+
 def fft_magnitude(img: Image.Image):
     img = np.array(img.convert("L"))  # grayscale
     f = np.fft.fft2(img)

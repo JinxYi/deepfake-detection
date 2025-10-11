@@ -42,9 +42,9 @@ def _process_sample(sample):
         # In __getitem__ and __iter__ methods, replace:
         # image = sample["png"]
         # with:
-        image = sample["png"]
-        if isinstance(image, dict):
-            image = dict_to_pil(image)
+        # image = sample["png"]
+        # if isinstance(image, dict):
+        #     image = dict_to_pil(image)
         return sample
             
     except Exception as e:
@@ -225,7 +225,7 @@ class WildDeepfakeDataset(Dataset):
         return len(self.samples)
     
 class WildDeepfakeDataModule(L.LightningDataModule):
-    def __init__(self, dataset_name=DATASET_NAME, batch_size=32, num_workers=2, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None):
+    def __init__(self, dataset_name=DATASET_NAME, batch_size=32, num_workers=2, max_samples=None, seed=42, transforms: dict = None, additional_transforms=None, dataset_cache_dir=None):
         super().__init__()
         self.dataset_name = dataset_name
         self.batch_size = batch_size
@@ -234,18 +234,25 @@ class WildDeepfakeDataModule(L.LightningDataModule):
         self.seed = seed
         self.transforms = transforms
         self.additional_transforms = additional_transforms
+        self.dataset_cache_dir = dataset_cache_dir
 
     def setup(self, stage=None):
         """Load and preprocess datasets (called on every process in DDP)."""
-        dataset = load_dataset(self.dataset_name)
+        if self.dataset_cache_dir:
+            dataset = load_dataset(self.dataset_name, cache_dir=self.dataset_cache_dir)
+        else:
+            dataset = load_dataset(self.dataset_name)
 
         # Preprocess and filter
         # train_ds = dataset["train"].shuffle(seed=self.seed)
         # test_ds  = dataset["test"]
-        train_ds = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(seed=self.seed)
-        test_ds  = dataset["test"].map(_process_sample).filter(lambda x: x['label'] != -1)
+        train_ds = dataset["train"].map(_process_sample, num_proc=self.num_workers, load_from_cache_file=True).filter(lambda x: x['label'] != -1).shuffle(seed=self.seed)
+        test_ds  = dataset["test"].map(_process_sample, num_proc=self.num_workers, load_from_cache_file=True).filter(lambda x: x['label'] != -1)
 
-        train_ds, val_ds = train_ds.train_test_split(test_size=0.2, seed=self.seed) # create validation set
+        split = train_ds.train_test_split(test_size=0.2, seed=self.seed)
+        train_ds = split["train"]
+        val_ds = split["test"]
+        # train_ds, val_ds = train_ds.train_test_split(test_size=0.2, seed=self.seed) # create validation set
 
         # Wrap with your iterable dataset class
         self.train_dataset = WildDeepfakeDataset(train_ds, transform=self.transforms["train"], additional_transforms=self.additional_transforms, max_samples=self.max_samples)

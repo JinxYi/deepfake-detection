@@ -20,21 +20,20 @@
 ##SBATCH --nodelist=TC1N07
 
 ### Specify Time Limit, format: <min> or <min>:<sec> or <hr>:<min>:<sec> or <days>-<hr>:<min>:<sec> or <days>-<hr> ### 
-#SBATCH --time=60
+#SBATCH --time=360
 
 ### Specify name for the job, filename format for output and error ###
-#SBATCH --job-name=sfiad_sanity
+#SBATCH --job-name=load_wdf
 #SBATCH --output=output_%x_%j.out
 #SBATCH --error=error_%x_%j.err
 
 ### Your script for computation ###
 module load cuda/12.2
 module load anaconda
+eval "$(conda shell.bash hook)"
 source activate df-env
 
-# Debug: Show the Python version and path
+# Debug: Show the Python version
 python --version
-python -m site
 
-# Run your script
-python src/models/sfiad.py
+python -c 'from datasets import load_dataset; dataset = load_dataset("xingjunm/WildDeepfake", cache_dir="/scratch-shared/TANJ0303/datasets/")'
