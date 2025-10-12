@@ -34,18 +34,8 @@ def _extract_label(key_path):
 def _process_sample(sample):
     """Process a single sample and extract label"""
     try:
-        # Extract label from key path
-        label = _extract_label(sample['__key__'])
-        
         # Return processed sample with label
-        sample['label'] = label
-
-        # In __getitem__ and __iter__ methods, replace:
-        # image = sample["png"]
-        # with:
-        # image = sample["png"]
-        # if isinstance(image, dict):
-        #     image = dict_to_pil(image)
+        sample['label'] = _extract_label(sample['__key__'])
         return sample
             
     except Exception as e:
@@ -53,7 +43,7 @@ def _process_sample(sample):
         sample['label'] = -1
         return sample
 
-def load_streaming_dataset(dataset_path_or_name, max_samples=None, seed=config.SEED):
+def load_streaming_dataset(dataset_path_or_name=DATASET_NAME, max_samples=None, seed=config.SEED):
     """
     Load a Hugging Face dataset in streaming mode
     
@@ -67,36 +57,36 @@ def load_streaming_dataset(dataset_path_or_name, max_samples=None, seed=config.S
     """
     try:
         print(f"Loading streaming dataset: {dataset_path_or_name}")
-        dataset = load_dataset(dataset_path_or_name, streaming=True)
+        dataset = load_dataset(dataset_path_or_name, streaming=True, split="train")
         
         if 'train' not in dataset:
             raise ValueError(f"Dataset {dataset_path_or_name} does not have a 'train' split")
         
         # Process samples and add labels
-        train_dataset = dataset['train'].map(_process_sample).filter(lambda x: x['label'] != -1)
-        test_dataset = dataset['test'].map(_process_sample).filter(lambda x: x['label'] != -1)
+        train_dataset = dataset['train'].map(_process_sample)
+        # test_dataset = dataset['test'].map(_process_sample)
         
-        # Shuffle the dataset with a buffer
-        shuffled_train_dataset = train_dataset.shuffle(buffer_size=config.STREAM_SHUFFLE_BUFFER_SIZE, seed=seed)
+        # # Shuffle the dataset with a buffer
+        # shuffled_train_dataset = train_dataset.shuffle(buffer_size=config.STREAM_SHUFFLE_BUFFER_SIZE, seed=seed)
         
-        # Create train, validation and test datasets using take/skip
-        # For streaming datasets, we'll split using a counter approach
-        def split_train_val(ds, max_samples=None):
-            def gen(split):
-                count = 0
-                for sample in ds:
-                    if max_samples and count >= max_samples:
-                        break
-                    count += 1
-                    if count % 10 == 0 and split == "val":  # ~10% validation
-                        yield sample
-                    elif count % 10 != 0 and split == "train":
-                        yield sample
-            return gen("train"), gen("val")
+        # # Create train, validation and test datasets using take/skip
+        # # For streaming datasets, we'll split using a counter approach
+        # def split_train_val(ds, max_samples=None):
+        #     def gen(split):
+        #         count = 0
+        #         for sample in ds:
+        #             if max_samples and count >= max_samples:
+        #                 break
+        #             count += 1
+        #             if count % 10 == 0 and split == "val":  # ~10% validation
+        #                 yield sample
+        #             elif count % 10 != 0 and split == "train":
+        #                 yield sample
+        #     return gen("train"), gen("val")
 
-        train_iter, val_iter = split_train_val(shuffled_train_dataset, max_samples=max_samples)
+        # train_iter, val_iter = split_train_val(shuffled_train_dataset, max_samples=max_samples)
 
-        return train_iter, val_iter, test_dataset
+        return train_dataset
         
     except Exception as e:
         print(f"Error loading streaming dataset: {e}")
