@@ -115,8 +115,7 @@ def get_transforms(mode: str, image_size: int = 224):
 
     if mode == 'rgb':
         norm_mean, norm_std = RESNET_INPUT_MEAN, RESNET_INPUT_SD
-        freq_transform = transforms.ToTensor(),
-
+        freq_transform = transforms.ToTensor()
     elif mode == 'fft_mag':
         norm_mean, norm_std = [0.5], [0.5]
         freq_transform = transforms.Lambda(fft_magnitude)
@@ -143,17 +142,14 @@ def get_transforms(mode: str, image_size: int = 224):
     data_transforms = {
         'train': transforms.Compose(common_train + [
             freq_transform,
-            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
         'val': transforms.Compose(common_eval + [
             freq_transform,
-            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
         'test': transforms.Compose(common_eval + [
             freq_transform,
-            # transforms.ToTensor(),
             transforms.Normalize(norm_mean, norm_std)
         ]),
     }

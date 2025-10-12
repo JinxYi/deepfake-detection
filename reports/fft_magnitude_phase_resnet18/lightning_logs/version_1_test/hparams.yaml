@@ -1,0 +1,5 @@
+freeze_features: false
+image_size: 224
+in_channels: 2
+lr: 0.001
+weights: IMAGENET1K_V1
