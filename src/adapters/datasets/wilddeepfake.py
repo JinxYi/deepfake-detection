@@ -257,7 +257,9 @@ class WildDeepfakeDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=True,
-            drop_last=True
+            drop_last=True,
+            prefetch_factor=8, 
+            persistent_workers=True
         )
 
     def val_dataloader(self):
@@ -265,7 +267,9 @@ class WildDeepfakeDataModule(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            pin_memory=True
+            pin_memory=True,
+            prefetch_factor=8,
+            persistent_workers=True
         )
 
     def test_dataloader(self):
@@ -273,5 +277,7 @@ class WildDeepfakeDataModule(L.LightningDataModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            pin_memory=True
+            pin_memory=True,
+            prefetch_factor=8,
+            persistent_workers=True
         )

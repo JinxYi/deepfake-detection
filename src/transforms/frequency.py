@@ -27,28 +27,23 @@ def fft_magnitude(img: Image.Image):
     return torch.from_numpy(mag).unsqueeze(0)  # shape (1, H, W)
 
 
-def fft_real_imag(img: Image.Image):
-    img = np.array(img.convert("L"))
+def fft_amp_phase(img: Image.Image):
+    img = np.array(img.convert("L"), dtype=np.float32)
     f = np.fft.fft2(img)
     fshift = np.fft.fftshift(f)
-    real = np.real(fshift)
-    imag = np.imag(fshift)
+    amp = np.log1p(np.abs(fshift))
 
-    real_range = real.max() - real.min()
-    if real_range < epsilon:
-        print("Warning: real part has close to zero range.")
-        real = np.zeros_like(real)
+    amp_range = amp.max() - amp.min()
+    if amp_range < epsilon:
+        print("Warning: amp part has close to zero range.")
+        amp = np.zeros_like(amp)
     else:
-        real = (real - real.min()) / real_range
+        amp = (amp - amp.min()) / amp_range
 
-    imag_range = imag.max() - imag.min()
-    if imag_range < epsilon:
-        print("Warning: imaginary part has close to zero range.")
-        imag = np.zeros_like(imag)
-    else:
-        imag = (imag - imag.min()) / imag_range
+    phase = np.angle(fshift)
+    phase = (phase + np.pi) / (2 * np.pi)
 
-    arr = np.stack([real, imag], axis=0).astype(np.float32)  # (2,H,W)
+    arr = np.stack([amp, phase], axis=0).astype(np.float32)  # (2,H,W)
     return torch.from_numpy(arr)
 
 
@@ -120,9 +115,9 @@ def get_transforms(mode: str, image_size: int = 224):
         norm_mean, norm_std = [0.5], [0.5]
         freq_transform = transforms.Lambda(fft_magnitude)
 
-    elif mode == 'fft_ri':
+    elif mode == 'fft_mag_phase':
         norm_mean, norm_std = [0.5, 0.5], [0.5, 0.5]
-        freq_transform = transforms.Lambda(fft_real_imag)
+        freq_transform = transforms.Lambda(fft_amp_phase)
 
     elif mode == 'dct':
         norm_mean, norm_std = [0.5], [0.5]
