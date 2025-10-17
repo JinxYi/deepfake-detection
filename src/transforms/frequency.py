@@ -11,7 +11,7 @@ RESNET_INPUT_SD = [0.229, 0.224, 0.225]
 epsilon = 1e-8
 
 def fft_magnitude(img: Image.Image):
-    img = np.array(img.convert("L"))  # grayscale
+    img = np.array(img.convert("L"), dtype=np.float32)  # grayscale
     f = np.fft.fft2(img)
     fshift = np.fft.fftshift(f)
     mag = np.log1p(np.abs(fshift))
@@ -26,6 +26,16 @@ def fft_magnitude(img: Image.Image):
     mag = mag.astype(np.float32)
     return torch.from_numpy(mag).unsqueeze(0)  # shape (1, H, W)
 
+def fft_phase(img: Image.Image):
+    img = np.array(img.convert("L"), dtype=np.float32)
+    f = np.fft.fft2(img)
+    fshift = np.fft.fftshift(f)
+
+    phase = np.angle(fshift)
+    phase = (phase + np.pi) / (2 * np.pi)
+
+    phase = phase.astype(np.float32)  # (1,H,W)
+    return torch.from_numpy(phase).unsqueeze(0)
 
 def fft_amp_phase(img: Image.Image):
     img = np.array(img.convert("L"), dtype=np.float32)
@@ -114,6 +124,10 @@ def get_transforms(mode: str, image_size: int = 224):
     elif mode == 'fft_mag':
         norm_mean, norm_std = [0.5], [0.5]
         freq_transform = transforms.Lambda(fft_magnitude)
+    
+    elif mode == 'fft_phase':
+        norm_mean, norm_std = [0.5], [0.5]
+        freq_transform = transforms.Lambda(fft_phase)
 
     elif mode == 'fft_mag_phase':
         norm_mean, norm_std = [0.5, 0.5], [0.5, 0.5]
