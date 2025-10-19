@@ -18,7 +18,7 @@
 
 ### Optional: Specify node to execute the job ###
 ### Remove 1st # at next line for the option to take effect ###
-#SBATCH --nodelist=TC1N04
+#SBATCH --nodelist=TC1N02
 
 ### Specify Time Limit, format: <min> or <min>:<sec> or <hr>:<min>:<sec> or <days>-<hr>:<min>:<sec> or <days>-<hr> ### 
 #SBATCH --time=360

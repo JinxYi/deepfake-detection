@@ -4,9 +4,11 @@ from torchvision import transforms
 from PIL import Image
 import cv2
 import pywt   # wavelet
+import torch.nn.functional as F
 
 RESNET_INPUT_MEAN = [0.485, 0.456, 0.406]
 RESNET_INPUT_SD = [0.229, 0.224, 0.225]
+RESNET_IMAGE_SIZE = (224, 224)
 
 epsilon = 1e-8
 
@@ -72,7 +74,7 @@ def dct_coeff(img: Image.Image):
     return torch.from_numpy(dct).unsqueeze(0)  # (1, H, W)
 
 
-def wavelet_subbands(img: Image.Image, wavelet='haar') -> torch.Tensor:
+def wavelet_subbands(img: Image.Image, wavelet='haar', upsample=True, size=RESNET_IMAGE_SIZE) -> torch.Tensor:
     img = np.array(img.convert("L"), dtype=np.float32)
     coeffs2 = pywt.dwt2(img, wavelet)
     cA, (cH, cV, cD) = coeffs2
@@ -89,7 +91,11 @@ def wavelet_subbands(img: Image.Image, wavelet='haar') -> torch.Tensor:
     arr = np.stack(
         [norm(cA), norm(cH), norm(cV), norm(cD)], axis=0
     ).astype(np.float32)  # (4, H/2, W/2)
-    return torch.from_numpy(arr)
+    tensor = torch.from_numpy(arr)
+
+    if upsample:
+        tensor = F.interpolate(tensor.unsqueeze(0), size=size, mode='bilinear', align_corners=False).squeeze(0)
+    return tensor  # (4, H, W)
 
 def high_freq_residual(img: Image.Image, kernel_size=5) -> torch.Tensor:
     img_gray = np.array(img.convert("L"), dtype=np.float32)

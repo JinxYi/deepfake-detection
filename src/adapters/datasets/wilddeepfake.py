@@ -1,12 +1,9 @@
-from collections.abc import Callable
 import torch
-from datasets import load_dataset, IterableDataset
+from datasets import load_dataset
 from torch.utils.data import DataLoader, Dataset
-import config
 import pytorch_lightning as L
 from PIL import Image
 import io
-from torchvision.transforms.functional import to_pil_image
 
 DATASET_NAME = "xingjunm/WildDeepfake"
 
@@ -43,146 +40,6 @@ def _process_sample(sample):
         sample['label'] = -1
         return sample
 
-def load_streaming_dataset(dataset_path_or_name=DATASET_NAME, max_samples=None, seed=config.SEED):
-    """
-    Load a Hugging Face dataset in streaming mode
-    
-    Args:
-        dataset_path_or_name: Hugging Face dataset name
-        max_samples: Maximum number of samples to use (only as a counter limit)
-        seed: Random seed for shuffling
-        
-    Returns:
-        train_dataset, val_dataset, test_dataset as streaming iterators
-    """
-    try:
-        print(f"Loading streaming dataset: {dataset_path_or_name}")
-        dataset = load_dataset(dataset_path_or_name, streaming=True, split="train")
-        
-        if 'train' not in dataset:
-            raise ValueError(f"Dataset {dataset_path_or_name} does not have a 'train' split")
-        
-        # Process samples and add labels
-        train_dataset = dataset['train'].map(_process_sample)
-        # test_dataset = dataset['test'].map(_process_sample)
-        
-        # # Shuffle the dataset with a buffer
-        # shuffled_train_dataset = train_dataset.shuffle(buffer_size=config.STREAM_SHUFFLE_BUFFER_SIZE, seed=seed)
-        
-        # # Create train, validation and test datasets using take/skip
-        # # For streaming datasets, we'll split using a counter approach
-        # def split_train_val(ds, max_samples=None):
-        #     def gen(split):
-        #         count = 0
-        #         for sample in ds:
-        #             if max_samples and count >= max_samples:
-        #                 break
-        #             count += 1
-        #             if count % 10 == 0 and split == "val":  # ~10% validation
-        #                 yield sample
-        #             elif count % 10 != 0 and split == "train":
-        #                 yield sample
-        #     return gen("train"), gen("val")
-
-        # train_iter, val_iter = split_train_val(shuffled_train_dataset, max_samples=max_samples)
-
-        return train_dataset
-        
-    except Exception as e:
-        print(f"Error loading streaming dataset: {e}")
-        raise
-
-class WildDeepfakeIterableDataset(IterableDataset):
-    """Dataset for deepfake detection"""
-    
-    def __init__(self, samples, transform=None, additional_transforms=None, max_samples=None):
-        self.dataset = samples
-        self.transform = transform
-        self.additional_transforms = additional_transforms
-        self.max_samples = max_samples
-    
-    def __iter__(self):
-        count = 0
-        for sample in self.dataset:
-            if self.max_samples and count >= self.max_samples:
-                break
-            count += 1
-
-            try:
-                image = sample["png"]
-                if isinstance(image, dict):
-                    image = dict_to_pil(image)
-                label = sample["label"]
-
-                # Perform transformations
-                if self.additional_transforms:
-                    image = self.additional_transforms(image)
-
-                if self.transform:
-                    image = self.transform(image)
-
-                yield image, torch.tensor(label, dtype=torch.float32)
-            except Exception as e:
-                print(f"Error loading sample {count}: {e}")
-                placeholder = torch.zeros((3, 224, 224))  # replace 224 with your `image_size`
-                raise
-                # yield placeholder, torch.tensor(-1, dtype=torch.float32)
-    def __len__(self):
-        if self.max_samples:
-            return self.max_samples
-        return 900000
-    
-def create_data_loaders(datasets: tuple[list, list, list], batch_size=16, num_workers=2, transforms = None, additional_transforms: Callable | None = None):
-    """
-    Create data loaders from dataset
-    
-    Args:
-        datasets: Either a tuple of (train_samples, val_samples, test_samples)
-                          or a function that returns this tuple
-        batch_size: Batch size for loaders
-        num_workers: Number of worker processes
-        
-    Returns:
-        train_loader, val_loader, test_loader
-    """
-    # Get samples
-    if isinstance(datasets, (list, tuple)) and len(datasets) == 3:
-        train_samples, val_samples, test_samples = datasets
-    else:
-        raise ValueError("datasets must be a tuple of (train, val, test) datasets or a function that returns samples")
-    
-    # Create datasets
-    train_dataset = WildDeepfakeIterableDataset(train_samples, transform=transforms["train"], additional_transforms=additional_transforms)
-    val_dataset = WildDeepfakeIterableDataset(val_samples, transform=transforms["val"], additional_transforms=additional_transforms)
-    test_dataset = WildDeepfakeIterableDataset(test_samples, transform=transforms["test"], additional_transforms=additional_transforms)
-    
-    # Create data loaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=True,
-        drop_last=True,
-        shuffle=False
-    )
-    
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=True,
-        shuffle=False
-    )
-    
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        pin_memory=True,
-        shuffle=False
-    )
-    
-    return train_loader, val_loader, test_loader
 
 class WildDeepfakeDataset(Dataset):
     """Map-style Dataset for deepfake detection (non-streaming)"""

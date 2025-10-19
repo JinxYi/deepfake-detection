@@ -1,9 +1,8 @@
 name: df-env
 channels:
-  - pytorch
-  - https://repo.anaconda.com/pkgs/main
-  - https://repo.anaconda.com/pkgs/r
+  - conda-forge
 dependencies:
+  - conda-forge::pytorch-lightning
   - datasets
   - ipykernel
   - jupyter
@@ -13,10 +12,10 @@ dependencies:
   - opencv
   - pyarrow
   - python=3.10
-  - conda-forge::pytorch-lightning
-  - transformers
   - pytorch::pytorch-cuda
-  - pytorch::pytorch
   - pytorch::torchvision
+  - transformers
+  - pytorch::pytorch
+  - conda-forge::pywavelets
   - timm
 prefix: /home/FYP/tanj0303/.conda/envs/df-env
