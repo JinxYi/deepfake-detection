@@ -1,14 +1,21 @@
-name: mlenv
+name: df-env
 channels:
   - conda-forge
-  - defaults
 dependencies:
-  - python=3.11
-  - pytorch
-  - torchvision
-  - numpy
-  - pandas
-  - scikit-learn
-  - matplotlib
-  - pillow
+  - conda-forge::pytorch-lightning
   - datasets
+  - ipykernel
+  - jupyter
+  - matplotlib
+  - nb_conda_kernels
+  - numpy
+  - opencv
+  - pyarrow
+  - python=3.10
+  - pytorch::pytorch-cuda
+  - pytorch::torchvision
+  - transformers
+  - pytorch::pytorch
+  - conda-forge::pywavelets
+  - timm
+prefix: /home/FYP/tanj0303/.conda/envs/df-env

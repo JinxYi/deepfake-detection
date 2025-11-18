@@ -173,5 +173,11 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+*.ckpt
 
-datasets
+# ignore analysis samples
+analysis/samples/*
+!analysis/samples/real/0.png
+!analysis/samples/fake/0.png
+
+analysis/gradcam

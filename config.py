@@ -1,6 +1,7 @@
 # Path Directories
 DATASET_DIR = "datasets"
 CHECKPOINTS_DIR = "reports"
+ANALYSIS_DIR = "analysis"
 BENCHMARK_DIR = "reports/benchmarks"
 
 # Reproducability
