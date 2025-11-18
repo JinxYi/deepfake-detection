@@ -175,14 +175,14 @@ class SidADataModule(L.LightningDataModule):
         self.transforms = transforms
 
     def setup(self, stage=None):
-        dataset = load_dataset(DATASET_NAME, streaming=True)
-
-        train_stream = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(buffer_size=1000, seed=self.seed)
-        val_stream   = dataset["validation"].map(_process_sample).filter(lambda x: x['label'] != -1)
+        dataset = load_dataset(DATASET_NAME, streaming=True, split="validation")
+        val_stream   = dataset.map(_process_sample)
+        # train_stream = dataset["train"].map(_process_sample).filter(lambda x: x['label'] != -1).shuffle(buffer_size=1000, seed=self.seed)
+        # val_stream   = dataset["validation"].map(_process_sample).filter(lambda x: x['label'] != -1)
 
         # wrap in iterable datasets
-        self.train_dataset = SidAIterableDataset(train_stream, transform=self.transforms["train"], max_samples=self.max_samples)
-        self.val_dataset   = SidAIterableDataset(val_stream, transform=self.transforms["val"], max_samples=self.max_samples)
+        # self.train_dataset = SidAIterableDataset(train_stream, transform=self.transforms["train"], max_samples=self.max_samples)
+        # self.val_dataset   = SidAIterableDataset(val_stream, transform=self.transforms["val"], max_samples=self.max_samples)
         self.test_dataset  = SidAIterableDataset(val_stream, transform=self.transforms["test"], max_samples=self.max_samples)
 
     def train_dataloader(self):
