@@ -181,3 +181,7 @@ analysis/samples/*
 !analysis/samples/fake/0.png
 
 analysis/gradcam
+
+# datasets
+.datasets/
+.cache/
