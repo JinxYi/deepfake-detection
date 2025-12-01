@@ -11,8 +11,8 @@ dependencies:
   - numpy
   - opencv
   - pyarrow
-  - python=3.10
-  - pytorch::pytorch-cuda
+  - python=3.12
+  # - pytorch::pytorch-cuda
   - pytorch::torchvision
   - transformers
   - pytorch::pytorch
