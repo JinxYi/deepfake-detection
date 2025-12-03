@@ -185,3 +185,7 @@ analysis/gradcam
 # datasets
 .datasets/
 .cache/
+
+
+# React
+node_modules/
