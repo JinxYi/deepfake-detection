@@ -2,8 +2,9 @@ name: df-env
 channels:
   - conda-forge
 dependencies:
-  - conda-forge::pytorch-lightning
   - datasets
+  - flask
+  - flask-cors
   - ipykernel
   - jupyter
   - matplotlib
@@ -11,11 +12,12 @@ dependencies:
   - numpy
   - opencv
   - pyarrow
-  - python=3.10
-  - pytorch::pytorch-cuda
+  - python=3.12
+  # - pytorch::pytorch-cuda
+  - pytorch::pytorch
+  - pytorch-lightning
+  - pywavelets
   - pytorch::torchvision
   - transformers
-  - pytorch::pytorch
-  - conda-forge::pywavelets
   - timm
 prefix: /home/FYP/tanj0303/.conda/envs/df-env

@@ -1,9 +1,9 @@
 
 import sys
 import os
+import config
 
-import sys
-import os
+from models.resnet import ResNetClassifier
 
 
 ########### COPY AND PASTE THIS SECTION TO THE START OF EVERY NOTEBOOK ###########
@@ -42,3 +42,38 @@ def make_directory(base_dir, new_dir):
     new_path = os.path.join(base_dir, new_dir)
     os.makedirs(new_path, exist_ok=True)
     return new_path
+
+def get_model(model_tag: str = "dwt_rgb_resnet18"):
+    in_channels = 1
+    model_checkpoint_dir = f"{sys.path[0]}/{config.CHECKPOINTS_DIR}/{model_tag}"
+    
+    match model_tag:
+        case "dct_resnet18":
+            in_channels = 1
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=8-step=228240.ckpt"
+        case "dwt_resnet18":
+            in_channels = 4
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=15-step=405760.ckpt"
+        case "dwt_rgb_resnet18":
+            in_channels = 7
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=13-step=177520.ckpt"
+        case "fft_magnitude_phase_resnet18":
+            in_channels = 2
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=8-step=228240.ckpt"
+        case "fft_magnitude_resnet18":
+            in_channels = 1
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=10-step=278960.ckpt"
+        case "fft_phase_resnet18":
+            in_channels = 1
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=6-step=177520.ckpt"
+        case "rgb_resnet18":
+            in_channels = 3
+            checkpoint = "lightning_logs/version_0/checkpoints/epoch=10-step=278960.ckpt"
+    
+    deepfake_detector = ResNetClassifier.load_from_checkpoint(
+        checkpoint_path=f"{model_checkpoint_dir}/{checkpoint}",
+        in_channels=in_channels,
+        freeze_features=False,
+        weights_only=False
+        )
+    return deepfake_detector

@@ -97,6 +97,11 @@ def wavelet_subbands(img: Image.Image, wavelet='haar', upsample=True, size=RESNE
         tensor = F.interpolate(tensor.unsqueeze(0), size=size, mode='bilinear', align_corners=False).squeeze(0)
     return tensor  # (4, H, W)
 
+def dwt_rgb_concat(img: Image.Image, image_size=224):
+    rgb_t = transforms.ToTensor()(img)           # (3, H, W)
+    wave_t = wavelet_subbands(img, upsample=True, size=(image_size, image_size))  # (4, H, W)
+    return torch.cat([rgb_t, wave_t], dim=0)     # (7, H, W)
+
 def high_freq_residual(img: Image.Image, kernel_size=5) -> torch.Tensor:
     img_gray = np.array(img.convert("L"), dtype=np.float32)
     blur = cv2.GaussianBlur(img_gray, (kernel_size, kernel_size), 0)
@@ -109,6 +114,7 @@ def high_freq_residual(img: Image.Image, kernel_size=5) -> torch.Tensor:
         res = (res - res.min()) / res_range
     res = res.astype(np.float32)
     return torch.from_numpy(res).unsqueeze(0)  # (1, H, W)
+
 
 
 def get_transforms(mode: str, image_size: int = 224):
@@ -147,6 +153,10 @@ def get_transforms(mode: str, image_size: int = 224):
         norm_mean, norm_std = [0.5]*4, [0.5]*4
         freq_transform = transforms.Lambda(wavelet_subbands)
 
+    elif mode == 'dwt_rgb':
+        norm_mean = RESNET_INPUT_MEAN + [0.5]*4
+        norm_std = RESNET_INPUT_SD + [0.5]*4
+        freq_transform = transforms.Lambda(lambda img: dwt_rgb_concat(img, image_size=image_size))
     elif mode == 'residual':
         norm_mean, norm_std = [0.5], [0.5]
         freq_transform = transforms.Lambda(high_freq_residual)

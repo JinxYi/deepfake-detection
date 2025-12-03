@@ -54,6 +54,11 @@ To check your conda environments, enter:
 source env list
 ```
 
+To run the Flask server, enter:
+```
+conda run --no-capture-output -n df-env python server.py
+```
+where `df-env` is the name of the conda environment installed earlier. Add the `--no-capture-output` to see print statements in the console.
 
 ## Project Directory Guide (Detailed)
 - `config.py`: Project configuration variables (paths, default settings).
