@@ -97,8 +97,8 @@ def detect_deepfake():
 
         # Check if face was detected
         if cropped_face_np_bgr is None:
-            # Handle the case where no face was found
-            raise ValueError("No face detected in the image.")
+            cropped_face_np_bgr = new_image_np_bgr  # Fallback to the original image if no face is detected
+
 
         # Convert the cropped NumPy array (BGR) back to PIL Image (RGB) for torchvision transforms
         cropped_face_pil_rgb = Image.fromarray(cv2.cvtColor(cropped_face_np_bgr, cv2.COLOR_BGR2RGB))
