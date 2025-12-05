@@ -74,6 +74,8 @@ where `df-env` is the name of the conda environment installed earlier. Add the `
 	- `adapters/`: Dataset adapter code for loading and preprocessing datasets (`deepfakeface.py`, `sida.py`, `wilddeepfake.py`).
 	- `models/`: Model definitions (e.g., `resnet.py`, `freqnet.py`, `encoder_decoder.py`).
 	- `transforms/`: Signal/image transform implementations and fusion helpers (`frequency.py`, `fusion.py`).
+- `server.py`: Flask server code for hosting the deepfake detection model as an API.
+
 
 ## Contributing
 You are free to use this code for educational and research purposes. If you find any issues or have suggestions for improvements, please feel free to open an issue or submit a pull request.
